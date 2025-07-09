@@ -1,6 +1,20 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// 型定義
+interface Seminar {
+  id?: string
+  event_date: string
+  event_time: string
+  participant_count: number
+  year: number
+  month: number
+  day: number
+  scraped_at?: string
+  is_deleted?: boolean
+  deleted_at?: string
+}
+
 // Supabaseクライアントの初期化
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,18 +64,18 @@ export async function POST() {
       .select('*')
       .eq('is_deleted', false)
     
-    const existingMap = new Map(
-      existingData?.map(s => [`${s.event_date}_${s.event_time}`, s]) || []
+    const existingMap = new Map<string, Seminar>(
+      existingData?.map((s: Seminar) => [`${s.event_date}_${s.event_time}`, s]) || []
     )
     
     const result = {
       success: true,
-      added: [],
-      updated: [],
-      removed: []
+      added: [] as Array<{ date: string; time: string; participants: number }>,
+      updated: [] as Array<{ date: string; time: string; oldParticipants: number; newParticipants: number }>,
+      removed: [] as Array<{ date: string; time: string }>
     }
     
-    const currentSeminars = new Map()
+    const currentSeminars = new Map<string, Seminar>()
     
     // 新規・更新処理
     for (const seminar of seminars) {
@@ -139,7 +153,14 @@ export async function POST() {
 }
 
 // HTMLをパースしてセミナー情報を抽出
-function parseCalendarHTML(html: string) {
+function parseCalendarHTML(html: string): Array<{
+  event_date: string
+  event_time: string
+  participant_count: number
+  year: number
+  month: number
+  day: number
+}> {
   const seminars = []
   
   // mb30クラスを含む要素を探す
