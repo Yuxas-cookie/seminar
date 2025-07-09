@@ -15,11 +15,17 @@ interface Seminar {
   deleted_at?: string
 }
 
-// Supabaseクライアントの初期化
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+// Supabaseクライアントを関数内で初期化
+function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  
+  if (!url || !key) {
+    throw new Error('Supabase環境変数が設定されていません')
+  }
+  
+  return createClient(url, key)
+}
 
 export async function POST() {
   try {
@@ -57,6 +63,9 @@ export async function POST() {
     
     // HTMLからセミナー情報を抽出
     const seminars = parseCalendarHTML(html)
+    
+    // Supabaseクライアントを取得
+    const supabase = getSupabaseClient()
     
     // 既存データを取得
     const { data: existingData } = await supabase

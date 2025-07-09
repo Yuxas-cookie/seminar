@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# エキスパ セミナーカレンダー
+
+セミナー情報をスクレイピングして表示・管理するカレンダーアプリケーションです。
+
+## 機能
+
+- セミナー情報のカレンダー表示
+- スタッフ管理（並び順付き）
+- 入れない日の管理（スタッフ別）
+- セミナー情報の自動更新（4時間ごと）
+- レスポンシブデザイン対応
+
+## 環境変数
+
+Vercelでデプロイする際は、以下の環境変数を設定してください：
+
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SCRAPING_EMAIL=your_scraping_email
+SCRAPING_PASSWORD=your_scraping_password
+```
+
+## 技術スタック
+
+- **フロントエンド**: Next.js 15, TypeScript, Tailwind CSS v4
+- **データベース**: Supabase
+- **UI**: Radix UI, Framer Motion
+- **カレンダー**: FullCalendar
+- **スクレイピング**: Node.js (fetch API)
 
 ## Getting Started
 
-First, run the development server:
+開発サーバーの起動:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+[http://localhost:3000](http://localhost:3000) をブラウザで開いて確認してください。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ビルド
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+```
 
-## Learn More
+## デプロイ
 
-To learn more about Next.js, take a look at the following resources:
+1. GitHubにプッシュ
+2. Vercelでプロジェクトをインポート
+3. 環境変数を設定
+4. デプロイ
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Supabase Edge Functions
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+自動更新用のEdge Functionは `supabase/functions/auto-update-seminars` にあります。
+4時間ごとに自動実行されるよう設定されています。
