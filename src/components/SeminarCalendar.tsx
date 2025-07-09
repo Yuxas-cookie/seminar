@@ -451,17 +451,13 @@ export default function SeminarCalendar() {
                         {blockedStaffList.map((staff: any, idx: number) => (
                           <div
                             key={idx}
-                            className="flex items-center gap-1 px-1 py-0.5 rounded text-[10px] font-medium"
+                            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
                             style={{
-                              backgroundColor: staff.color + '20',
-                              borderLeft: `3px solid ${staff.color}`
+                              backgroundColor: staff.color,
+                              color: getContrastTextColor(staff.color)
                             }}
                           >
-                            <div 
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: staff.color }}
-                            />
-                            <span style={{ color: getDarkerShade(staff.color) }}>
+                            <span className="font-semibold">
                               {staff.name}
                             </span>
                           </div>
