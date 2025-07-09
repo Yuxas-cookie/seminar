@@ -6,17 +6,80 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// セミナーデータをスクレイピングする関数（実際のサイトに合わせて調整が必要）
+// セミナーデータをスクレイピングする関数
 async function scrapeSeminars() {
   try {
-    // ここに実際のスクレイピングコードを実装
-    // 例：
-    // const response = await fetch('https://example.com/seminars')
-    // const html = await response.text()
-    // const seminars = parseHTML(html)
+    // Pythonスクリプトを実行する代わりに、直接スクレイピングを実行
+    const loginUrl = 'https://exp-t.jp/account/login/expa'
+    const calendarUrl = 'https://exp-t.jp/e/event/calendar'
     
-    // 仮のデータを返す（実装時は実際のスクレイピング結果を返す）
-    return []
+    // ログイン
+    const loginResponse = await fetch(loginUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        'MasterCustomerMail': 'sekaino.hiroshi34@gmail.com',
+        'MasterCustomerPassword': 'h31503150h'
+      })
+    })
+    
+    if (!loginResponse.ok) {
+      throw new Error('ログインに失敗しました')
+    }
+    
+    // セッションクッキーを取得
+    const cookies = loginResponse.headers.get('set-cookie')
+    
+    // カレンダーページを取得
+    const calendarResponse = await fetch(calendarUrl, {
+      headers: {
+        'Cookie': cookies || ''
+      }
+    })
+    
+    const html = await calendarResponse.text()
+    
+    // HTMLをパース（簡易版）
+    const seminars = []
+    const tableRegex = /<table[^>]*>[\s\S]*?<\/table>/g
+    const tables = html.match(tableRegex) || []
+    
+    for (const table of tables) {
+      try {
+        // fw-bクラスの要素を探す
+        const fwbElements = table.match(/<[^>]*class=['"]fw-b['"][^>]*>([^<]*)<\/[^>]*>/g) || []
+        
+        if (fwbElements.length >= 2) {
+          const dateText = fwbElements[fwbElements.length - 2].replace(/<[^>]*>/g, '')
+          const countText = fwbElements[fwbElements.length - 1].replace(/<[^>]*>/g, '')
+          
+          // 日付と時刻を解析
+          const [dayPart, timePart] = dateText.split(' ')
+          const [month, day] = dayPart.split('/').map(Number)
+          const [hour, minute] = timePart.split('｜')[0].split(':').map(Number)
+          
+          const currentYear = new Date().getFullYear()
+          const eventDate = `${currentYear}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+          const eventTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`
+          
+          seminars.push({
+            event_date: eventDate,
+            event_time: eventTime,
+            participant_count: parseInt(countText),
+            year: currentYear,
+            month: month,
+            day: day
+          })
+        }
+      } catch (error) {
+        console.error('テーブル解析エラー:', error)
+        continue
+      }
+    }
+    
+    return seminars
   } catch (error) {
     console.error('Scraping error:', error)
     throw error
