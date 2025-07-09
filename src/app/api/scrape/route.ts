@@ -161,7 +161,14 @@ function parseCalendarHTML(html: string): Array<{
   month: number
   day: number
 }> {
-  const seminars = []
+  const seminars: Array<{
+    event_date: string
+    event_time: string
+    participant_count: number
+    year: number
+    month: number
+    day: number
+  }> = []
   
   // mb30クラスを含む要素を探す
   const mb30Match = html.match(/<[^>]*class=['"][^'"]*mb30[^'"]*['"][^>]*>[\s\S]*?<\/[^>]*>/g)
