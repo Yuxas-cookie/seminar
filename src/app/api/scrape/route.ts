@@ -28,6 +28,14 @@ function getSupabaseClient() {
 }
 
 export async function POST() {
+  // API環境変数チェック
+  console.log('=== API Route Environment Check ===')
+  console.log('NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ 設定済み' : '❌ 未設定')
+  console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ 設定済み' : '❌ 未設定')
+  console.log('SCRAPING_EMAIL:', process.env.SCRAPING_EMAIL ? '✅ 設定済み' : '❌ 未設定 (デフォルト値使用)')
+  console.log('SCRAPING_PASSWORD:', process.env.SCRAPING_PASSWORD ? '✅ 設定済み' : '❌ 未設定 (デフォルト値使用)')
+  console.log('==================================')
+  
   try {
     // 認証情報の取得
     const email = process.env.SCRAPING_EMAIL || 'sekaino.hiroshi34@gmail.com'

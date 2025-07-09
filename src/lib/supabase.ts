@@ -3,10 +3,19 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
+// 環境変数の状態を詳細にログ出力
+console.log('=== Supabase Environment Variables Check ===')
+console.log('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl || '❌ 未設定')
+console.log('NEXT_PUBLIC_SUPABASE_URL length:', supabaseUrl?.length || 0)
+console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseAnonKey ? `✅ 設定済み (${supabaseAnonKey.substring(0, 20)}...)` : '❌ 未設定')
+console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY length:', supabaseAnonKey?.length || 0)
+console.log('==========================================')
+
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Supabase environment variables are missing!')
-  console.error('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl)
-  console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'Set' : 'Missing')
+  console.error('🚨 Supabase環境変数が正しく設定されていません！')
+  console.error('必要な環境変数:')
+  console.error('- NEXT_PUBLIC_SUPABASE_URL')
+  console.error('- NEXT_PUBLIC_SUPABASE_ANON_KEY')
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
