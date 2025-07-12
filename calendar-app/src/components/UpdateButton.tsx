@@ -40,6 +40,16 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
       const scrapeResult = await scrapeResponse.json()
       console.log('スクレイピング結果:', scrapeResult)
       
+      // GitHub Actionsワークフローの情報を表示
+      if (scrapeResult.workflow_run) {
+        console.log('🚀 GitHub Actions実行情報:', {
+          id: scrapeResult.workflow_run.id,
+          status: scrapeResult.workflow_run.status,
+          url: scrapeResult.workflow_run.html_url
+        })
+        console.log(`GitHub Actionsで確認: ${scrapeResult.workflow_run.html_url}`)
+      }
+      
       // デバッグログを表示
       if (scrapeResult.debugLogs && scrapeResult.debugLogs.length > 0) {
         console.group('🔍 Edge Function デバッグログ')
@@ -49,6 +59,17 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
       
       if (!scrapeResult.success) {
         throw new Error(scrapeResult.error || 'スクレイピングに失敗しました')
+      }
+
+      // GitHub Actionsの場合は、メッセージを表示して処理を終了
+      if (scrapeResult.message && scrapeResult.message.includes('GitHub Actions')) {
+        setUpdateResult({
+          added: [],
+          updated: [],
+          removed: []
+        })
+        setShowResult(true)
+        return
       }
 
       // 更新結果を取得
@@ -134,7 +155,7 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
                         </Dialog.Title>
                         <p className="text-gray-600 mb-6">{error}</p>
                       </>
-                    ) : hasChanges ? (
+                    ) : updateResult && hasChanges ? (
                       <>
                         <div className="inline-flex p-4 rounded-full bg-green-100 mb-4">
                           <Check className="w-8 h-8 text-green-600" />
@@ -192,14 +213,17 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
                       </>
                     ) : (
                       <>
-                        <div className="inline-flex p-4 rounded-full bg-gray-100 mb-4">
-                          <Check className="w-8 h-8 text-gray-600" />
+                        <div className="inline-flex p-4 rounded-full bg-blue-100 mb-4">
+                          <RefreshCw className="w-8 h-8 text-blue-600" />
                         </div>
                         <Dialog.Title className="text-2xl font-bold text-gray-800 mb-2">
-                          更新完了
+                          スクレイピング開始
                         </Dialog.Title>
-                        <p className="text-gray-600 mb-6">
-                          新しい変更はありませんでした
+                        <p className="text-gray-600 mb-4">
+                          {error ? error : 'GitHub Actionsでスクレイピングを開始しました'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          処理には数分かかります。完了後、ページを更新してください。
                         </p>
                       </>
                     )}
