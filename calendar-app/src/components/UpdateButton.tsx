@@ -32,6 +32,7 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
     setWorkflowRunId(null)
     setWorkflowStatus(null)
     setWorkflowSteps([])
+    setShowResult(true) // すぐにポップアップを表示
 
     try {
       // スクレイピングAPIを呼び出し
@@ -118,7 +119,6 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : '更新中にエラーが発生しました')
       setShowResult(true)
-    } finally {
       setIsUpdating(false)
     }
   }
@@ -262,6 +262,61 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
                         </Dialog.Title>
                         <p className="text-gray-600 mb-6">{error}</p>
                       </>
+                    ) : isUpdating ? (
+                      <>
+                        <div className="inline-flex p-4 rounded-full bg-blue-100 mb-4">
+                          <Activity className="w-8 h-8 text-blue-600 animate-pulse" />
+                        </div>
+                        <Dialog.Title className="text-2xl font-bold text-gray-800 mb-2">
+                          {workflowStatus === 'completed' ? '処理完了' : 'スクレイピング実行中'}
+                        </Dialog.Title>
+                        
+                        {/* プログレスバー */}
+                        <div className="w-full bg-gray-200 rounded-full h-3 mb-4 overflow-hidden">
+                          <motion.div
+                            className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 0.5 }}
+                          />
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">
+                          進捗: {Math.round(progress)}%
+                        </p>
+                        
+                        {/* ステップの詳細 */}
+                        {workflowSteps.length > 0 && (
+                          <div className="bg-gray-50 rounded-lg p-4 mb-4 max-h-48 overflow-y-auto">
+                            <h4 className="font-semibold text-sm text-gray-700 mb-2">実行ステップ:</h4>
+                            <ul className="space-y-1 text-xs">
+                              {workflowSteps.map((step, index) => (
+                                <li key={index} className="flex items-center gap-2">
+                                  {step.conclusion === 'success' ? (
+                                    <Check className="w-3 h-3 text-green-500" />
+                                  ) : step.conclusion === 'failure' ? (
+                                    <X className="w-3 h-3 text-red-500" />
+                                  ) : (
+                                    <RefreshCw className="w-3 h-3 text-blue-500 animate-spin" />
+                                  )}
+                                  <span className={`
+                                    ${step.conclusion === 'success' ? 'text-green-700' : 
+                                      step.conclusion === 'failure' ? 'text-red-700' : 
+                                      'text-gray-700'}
+                                  `}>
+                                    {step.name}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        <p className="text-sm text-gray-500">
+                          {workflowStatus === 'completed' 
+                            ? '処理が完了しました。' 
+                            : '処理には数分かかります。このまましばらくお待ちください。'}
+                        </p>
+                      </>
                     ) : updateResult && hasChanges ? (
                       <>
                         <div className="inline-flex p-4 rounded-full bg-green-100 mb-4">
@@ -321,56 +376,16 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
                     ) : (
                       <>
                         <div className="inline-flex p-4 rounded-full bg-blue-100 mb-4">
-                          <Activity className="w-8 h-8 text-blue-600 animate-pulse" />
+                          <RefreshCw className="w-8 h-8 text-blue-600" />
                         </div>
                         <Dialog.Title className="text-2xl font-bold text-gray-800 mb-2">
-                          {workflowStatus === 'completed' ? '処理完了' : 'スクレイピング実行中'}
+                          スクレイピング開始
                         </Dialog.Title>
-                        
-                        {/* プログレスバー */}
-                        <div className="w-full bg-gray-200 rounded-full h-3 mb-4 overflow-hidden">
-                          <motion.div
-                            className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress}%` }}
-                            transition={{ duration: 0.5 }}
-                          />
-                        </div>
-                        <p className="text-sm text-gray-600 mb-4">
-                          進捗: {Math.round(progress)}%
+                        <p className="text-gray-600 mb-4">
+                          GitHub Actionsでスクレイピングを開始しました
                         </p>
-                        
-                        {/* ステップの詳細 */}
-                        {workflowSteps.length > 0 && (
-                          <div className="bg-gray-50 rounded-lg p-4 mb-4 max-h-48 overflow-y-auto">
-                            <h4 className="font-semibold text-sm text-gray-700 mb-2">実行ステップ:</h4>
-                            <ul className="space-y-1 text-xs">
-                              {workflowSteps.map((step, index) => (
-                                <li key={index} className="flex items-center gap-2">
-                                  {step.conclusion === 'success' ? (
-                                    <Check className="w-3 h-3 text-green-500" />
-                                  ) : step.conclusion === 'failure' ? (
-                                    <X className="w-3 h-3 text-red-500" />
-                                  ) : (
-                                    <RefreshCw className="w-3 h-3 text-blue-500 animate-spin" />
-                                  )}
-                                  <span className={`
-                                    ${step.conclusion === 'success' ? 'text-green-700' : 
-                                      step.conclusion === 'failure' ? 'text-red-700' : 
-                                      'text-gray-700'}
-                                  `}>
-                                    {step.name}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        
                         <p className="text-sm text-gray-500">
-                          {workflowStatus === 'completed' 
-                            ? '処理が完了しました。' 
-                            : '処理には数分かかります。このまましばらくお待ちください。'}
+                          処理には数分かかります。完了後、ページを更新してください。
                         </p>
                       </>
                     )}
