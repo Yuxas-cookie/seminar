@@ -1,0 +1,23 @@
+# Expertspaスクレイピング定期実行設定
+# 
+# この設定をcrontabに追加するには：
+# 1. ターミナルで以下のコマンドを実行: crontab -e
+# 2. 以下の行を追加（時間は必要に応じて調整）
+# 3. 保存して終了
+
+# 毎日午前6時に実行
+0 6 * * * /Users/hashimotoyasuhiro/Desktop/営業/expertspa-scraper/cron_script.sh
+
+# 毎日午前6時と午後6時に実行（1日2回）
+# 0 6,18 * * * /Users/hashimotoyasuhiro/Desktop/営業/expertspa-scraper/cron_script.sh
+
+# 平日（月-金）の午前9時に実行
+# 0 9 * * 1-5 /Users/hashimotoyasuhiro/Desktop/営業/expertspa-scraper/cron_script.sh
+
+# 4時間ごとに実行
+# 0 */4 * * * /Users/hashimotoyasuhiro/Desktop/営業/expertspa-scraper/cron_script.sh
+
+# 注意事項：
+# - パスは絶対パスで指定してください
+# - ログは /Users/hashimotoyasuhiro/Desktop/営業/expertspa-scraper/logs/ に保存されます
+# - 環境変数は .env ファイルから読み込まれます

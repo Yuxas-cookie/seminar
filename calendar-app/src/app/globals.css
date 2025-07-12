@@ -1,0 +1,189 @@
+@import 'tailwindcss';
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --fc-button-bg-color: transparent;
+  --fc-button-border-color: #e5e7eb;
+  --fc-button-hover-bg-color: #f3f4f6;
+  --fc-button-active-bg-color: #e5e7eb;
+  --fc-today-bg-color: #fef3c7;
+  --fc-border-color: #e5e7eb;
+  --fc-page-bg-color: transparent;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* FullCalendar カスタムスタイル */
+.fc {
+  font-family: inherit;
+}
+
+.fc-toolbar {
+  margin-bottom: 2rem;
+}
+
+.fc-toolbar-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.fc-button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  background-color: transparent;
+  transition: all 0.2s;
+}
+
+.fc-button:hover {
+  background-color: #f9fafb;
+}
+
+.fc-button-primary:not(:disabled).fc-button-active,
+.fc-button-primary:not(:disabled):active {
+  background-color: #4f46e5;
+  color: white;
+  border-color: #4f46e5;
+}
+
+.fc-button-primary:not(:disabled).fc-button-active:hover {
+  background-color: #4338ca;
+}
+
+.fc-button-group {
+  gap: 0.25rem;
+}
+
+.fc-button-group > .fc-button {
+  border-radius: 0;
+}
+
+.fc-button-group > .fc-button:first-child {
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+}
+
+.fc-button-group > .fc-button:last-child {
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+}
+
+.fc-col-header-cell {
+  border: 0;
+}
+
+.fc-col-header-cell-cushion {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  padding: 0.75rem 0;
+}
+
+.fc-daygrid-day {
+  transition: background-color 0.2s;
+}
+
+.fc-daygrid-day:hover {
+  background-color: #f9fafb;
+}
+
+.fc-daygrid-day-number {
+  font-size: 0.875rem;
+  color: #374151;
+  padding: 0.5rem;
+}
+
+.fc-daygrid-day.fc-day-today {
+  background-color: #fef3c7;
+}
+
+.fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  font-weight: 700;
+  color: #d97706;
+}
+
+.fc-event {
+  border: 0;
+  cursor: pointer;
+}
+
+.fc-daygrid-event {
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  margin: 0.25rem;
+}
+
+.fc-timegrid-event {
+  border-radius: 0.5rem;
+  border: 2px solid white;
+}
+
+/* スクロールバーのスタイル */
+.fc-scroller::-webkit-scrollbar {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.fc-scroller::-webkit-scrollbar-track {
+  background-color: #f3f4f6;
+  border-radius: 9999px;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb {
+  background-color: #9ca3af;
+  border-radius: 9999px;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+}
+
+/* ローディングアニメーション */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* カレンダーのレスポンシブ対応 */
+@media (max-width: 640px) {
+  .fc-toolbar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .fc-toolbar-chunk {
+    display: flex;
+    justify-content: center;
+  }
+
+  .fc-button {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+  }
+
+  .fc-toolbar-title {
+    font-size: 1.25rem;
+  }
+}
