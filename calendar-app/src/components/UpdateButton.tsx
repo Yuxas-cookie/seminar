@@ -28,6 +28,10 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
   const handleUpdate = async () => {
     setIsUpdating(true)
     setError(null)
+    setProgress(0) // プログレスを0%にリセット
+    setWorkflowRunId(null)
+    setWorkflowStatus(null)
+    setWorkflowSteps([])
 
     try {
       // スクレイピングAPIを呼び出し
@@ -70,12 +74,38 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
 
       // GitHub Actionsの場合は、メッセージを表示して処理を終了
       if (scrapeResult.message && scrapeResult.message.includes('GitHub Actions')) {
-        setUpdateResult({
-          added: [],
-          updated: [],
-          removed: []
-        })
-        setShowResult(true)
+        // ワークフローIDが取得できない場合でもダミーの進捗を表示
+        if (!scrapeResult.workflow_run) {
+          let dummyProgress = 10
+          const dummyTimer = setInterval(() => {
+            dummyProgress += Math.random() * 5
+            if (dummyProgress >= 100) {
+              dummyProgress = 100
+              clearInterval(dummyTimer)
+              setUpdateResult({
+                added: [],
+                updated: [],
+                removed: []
+              })
+              setShowResult(true)
+              setIsUpdating(false)
+            }
+            setProgress(dummyProgress)
+          }, 500)
+          
+          // 30秒後に強制的に完了
+          setTimeout(() => {
+            clearInterval(dummyTimer)
+            setProgress(100)
+            setUpdateResult({
+              added: [],
+              updated: [],
+              removed: []
+            })
+            setShowResult(true)
+            setIsUpdating(false)
+          }, 30000)
+        }
         return
       }
 
@@ -103,6 +133,8 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
   useEffect(() => {
     if (!workflowRunId || !isUpdating) return
 
+    let progressTimer: NodeJS.Timeout
+    
     const checkWorkflowStatus = async () => {
       try {
         const response = await fetch(`/api/workflow-status/${workflowRunId}`)
@@ -115,19 +147,32 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
           if (data.status === 'in_progress') {
             const completedSteps = data.steps.filter((step: any) => step.conclusion === 'success').length
             const totalSteps = data.steps.length || 1
-            setProgress(20 + (completedSteps / totalSteps) * 60)
+            const actualProgress = 20 + (completedSteps / totalSteps) * 60
+            
+            // 実際の進捗が現在の表示より大きい場合は更新
+            setProgress(prev => Math.max(prev, actualProgress))
           } else if (data.status === 'completed') {
-            setProgress(100)
-            if (data.conclusion === 'success') {
-              // 成功したら更新結果を取得
-              const result = await onUpdate()
-              setUpdateResult(result)
+            // 完了時は100%まで素早く進行
+            clearInterval(progressTimer)
+            const finalProgress = async () => {
+              for (let i = progress; i <= 100; i += 5) {
+                setProgress(i)
+                await new Promise(resolve => setTimeout(resolve, 50))
+              }
+              setProgress(100)
+              
+              if (data.conclusion === 'success') {
+                // 成功したら更新結果を取得
+                const result = await onUpdate()
+                setUpdateResult(result)
+              } else {
+                setError('スクレイピング処理が失敗しました')
+              }
               setShowResult(true)
-            } else {
-              setError('スクレイピング処理が失敗しました')
-              setShowResult(true)
+              setIsUpdating(false)
             }
-            setIsUpdating(false)
+            finalProgress()
+            return
           }
         }
       } catch (err) {
@@ -135,9 +180,24 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
       }
     }
 
-    const interval = setInterval(checkWorkflowStatus, 2000) // 2秒ごとにチェック
-    return () => clearInterval(interval)
-  }, [workflowRunId, isUpdating, onUpdate])
+    // ダミーの進捗を表示（ゆっくり増加）
+    progressTimer = setInterval(() => {
+      setProgress(prev => {
+        if (prev < 90) {
+          // 90%まではゆっくり増加
+          return prev + Math.random() * 2
+        }
+        return prev
+      })
+    }, 1000)
+
+    const statusInterval = setInterval(checkWorkflowStatus, 2000) // 2秒ごとにチェック
+    
+    return () => {
+      clearInterval(statusInterval)
+      clearInterval(progressTimer)
+    }
+  }, [workflowRunId, isUpdating, onUpdate, progress])
 
   return (
     <>
