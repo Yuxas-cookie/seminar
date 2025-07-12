@@ -49,11 +49,33 @@ jobs:
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       run: |
-        python scraper/main_with_update.py
+        echo "スクレイピング処理を開始します..."
+        echo "対象URL: https://expertspa.biz/seminar"
+        echo "==============================="
+        python scraper/main_with_update.py 2>&1 | tee scraping.log
+        echo "==============================="
+        echo "スクレイピング処理が完了しました"
     
-    # 6. 結果を通知（オプション）
-    - name: 実行結果を記録
-      if: always()  # 成功・失敗に関わらず実行
+    # 6. デバッグ情報を表示
+    - name: スクレイピング結果の要約
+      if: always()
       run: |
-        echo "スクレイピング完了: $(date)"
+        echo "=== スクレイピング結果要約 ==="
+        if [ -f scraping.log ]; then
+          echo "ログファイルから結果を抽出..."
+          grep -E "(追加|更新|削除|エラー|成功|失敗)" scraping.log || echo "特定のパターンが見つかりませんでした"
+        else
+          echo "ログファイルが見つかりません"
+        fi
+        echo "==============================="
+        echo "実行時刻: $(date)"
         echo "ステータス: ${{ job.status }}"
+        
+    # 7. エラーログの詳細
+    - name: エラーログを確認
+      if: failure()
+      run: |
+        echo "=== エラーログ ==="
+        if [ -f scraping.log ]; then
+          tail -50 scraping.log
+        fi

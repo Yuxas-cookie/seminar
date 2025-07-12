@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { RefreshCw, Check, X, AlertCircle } from 'lucide-react'
+import { RefreshCw, Check, X, AlertCircle, Activity } from 'lucide-react'
 import * as Dialog from '@radix-ui/react-dialog'
 
 interface UpdateResult {
@@ -20,6 +20,10 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
   const [showResult, setShowResult] = useState(false)
   const [updateResult, setUpdateResult] = useState<UpdateResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [workflowRunId, setWorkflowRunId] = useState<number | null>(null)
+  const [workflowStatus, setWorkflowStatus] = useState<string | null>(null)
+  const [workflowSteps, setWorkflowSteps] = useState<any[]>([])
+  const [progress, setProgress] = useState(0)
 
   const handleUpdate = async () => {
     setIsUpdating(true)
@@ -48,6 +52,9 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
           url: scrapeResult.workflow_run.html_url
         })
         console.log(`GitHub Actionsで確認: ${scrapeResult.workflow_run.html_url}`)
+        setWorkflowRunId(scrapeResult.workflow_run.id)
+        setWorkflowStatus('queued')
+        setProgress(10)
       }
       
       // デバッグログを表示
@@ -91,6 +98,46 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
     updateResult.updated.length > 0 ||
     updateResult.removed.length > 0
   )
+
+  // GitHub Actionsワークフローの状態を監視
+  useEffect(() => {
+    if (!workflowRunId || !isUpdating) return
+
+    const checkWorkflowStatus = async () => {
+      try {
+        const response = await fetch(`/api/workflow-status/${workflowRunId}`)
+        if (response.ok) {
+          const data = await response.json()
+          setWorkflowStatus(data.status)
+          setWorkflowSteps(data.steps || [])
+          
+          // プログレスを計算
+          if (data.status === 'in_progress') {
+            const completedSteps = data.steps.filter((step: any) => step.conclusion === 'success').length
+            const totalSteps = data.steps.length || 1
+            setProgress(20 + (completedSteps / totalSteps) * 60)
+          } else if (data.status === 'completed') {
+            setProgress(100)
+            if (data.conclusion === 'success') {
+              // 成功したら更新結果を取得
+              const result = await onUpdate()
+              setUpdateResult(result)
+              setShowResult(true)
+            } else {
+              setError('スクレイピング処理が失敗しました')
+              setShowResult(true)
+            }
+            setIsUpdating(false)
+          }
+        }
+      } catch (err) {
+        console.error('ワークフロー状態の確認エラー:', err)
+      }
+    }
+
+    const interval = setInterval(checkWorkflowStatus, 2000) // 2秒ごとにチェック
+    return () => clearInterval(interval)
+  }, [workflowRunId, isUpdating, onUpdate])
 
   return (
     <>
@@ -214,16 +261,56 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
                     ) : (
                       <>
                         <div className="inline-flex p-4 rounded-full bg-blue-100 mb-4">
-                          <RefreshCw className="w-8 h-8 text-blue-600" />
+                          <Activity className="w-8 h-8 text-blue-600 animate-pulse" />
                         </div>
                         <Dialog.Title className="text-2xl font-bold text-gray-800 mb-2">
-                          スクレイピング開始
+                          {workflowStatus === 'completed' ? '処理完了' : 'スクレイピング実行中'}
                         </Dialog.Title>
-                        <p className="text-gray-600 mb-4">
-                          {error ? error : 'GitHub Actionsでスクレイピングを開始しました'}
+                        
+                        {/* プログレスバー */}
+                        <div className="w-full bg-gray-200 rounded-full h-3 mb-4 overflow-hidden">
+                          <motion.div
+                            className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 0.5 }}
+                          />
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">
+                          進捗: {Math.round(progress)}%
                         </p>
+                        
+                        {/* ステップの詳細 */}
+                        {workflowSteps.length > 0 && (
+                          <div className="bg-gray-50 rounded-lg p-4 mb-4 max-h-48 overflow-y-auto">
+                            <h4 className="font-semibold text-sm text-gray-700 mb-2">実行ステップ:</h4>
+                            <ul className="space-y-1 text-xs">
+                              {workflowSteps.map((step, index) => (
+                                <li key={index} className="flex items-center gap-2">
+                                  {step.conclusion === 'success' ? (
+                                    <Check className="w-3 h-3 text-green-500" />
+                                  ) : step.conclusion === 'failure' ? (
+                                    <X className="w-3 h-3 text-red-500" />
+                                  ) : (
+                                    <RefreshCw className="w-3 h-3 text-blue-500 animate-spin" />
+                                  )}
+                                  <span className={`
+                                    ${step.conclusion === 'success' ? 'text-green-700' : 
+                                      step.conclusion === 'failure' ? 'text-red-700' : 
+                                      'text-gray-700'}
+                                  `}>
+                                    {step.name}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
                         <p className="text-sm text-gray-500">
-                          処理には数分かかります。完了後、ページを更新してください。
+                          {workflowStatus === 'completed' 
+                            ? '処理が完了しました。' 
+                            : '処理には数分かかります。このまましばらくお待ちください。'}
                         </p>
                       </>
                     )}

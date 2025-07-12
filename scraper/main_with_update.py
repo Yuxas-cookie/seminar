@@ -42,31 +42,42 @@ def main():
     }
     
     try:
+        print("=== スクレイピング処理開始 ===")
+        print(f"開始時刻: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
         # Supabaseクライアントの初期化
+        print("ステップ 1/7: Supabaseクライアントを初期化中...")
         supabase_client = init_supabase()
+        print("✅ Supabase接続成功")
         
         # 既存データを取得
+        print("ステップ 2/7: 既存のセミナーデータを取得中...")
         existing_response = supabase_client.table('seminars').select('*').execute()
         existing_data = {
             (s['event_date'], s['event_time']): s 
             for s in existing_response.data
         }
+        print(f"✅ 既存データ {len(existing_data)} 件を取得")
         
         # 実行日を取得
         today = datetime.now().date()
         
         # Chromeドライバーの設定
+        print("ステップ 3/7: Chromeドライバーを起動中...")
         options = webdriver.ChromeOptions()
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--headless')
         
         driver = webdriver.Chrome(options=options)
+        print("✅ Chromeドライバー起動成功")
         
         try:
             # ログインページにアクセス
+            print("ステップ 4/7: ログインページにアクセス中...")
             url = "https://exp-t.jp/account/login/expa"
             driver.get(url)
+            print("✅ ログインページに到達")
             
             wait = WebDriverWait(driver, 10)
             
@@ -88,10 +99,13 @@ def main():
             login_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#LoginForm > div.user-login-btn.mb16 > button")))
             login_button.click()
             time.sleep(1)
+            print("✅ ログイン成功")
             
             # カレンダーページに移動
+            print("ステップ 5/7: セミナーカレンダーをスクレイピング中...")
             driver.get("https://exp-t.jp/e/event/calendar")
             time.sleep(5)
+            print("✅ カレンダーページにアクセス成功")
             
             # ページのHTMLを取得
             html = driver.page_source
@@ -135,6 +149,9 @@ def main():
             driver.quit()
         
         # 差分を検出して更新
+        print(f"\nステップ 6/7: データベースを更新中...")
+        print(f"スクレイピングで取得したセミナー数: {len(new_data)}")
+        
         # 1. 新規追加または復活
         for key, data in new_data.items():
             if key not in existing_data:
@@ -222,13 +239,25 @@ def main():
         
         result['success'] = True
         
+        # 結果サマリー
+        print(f"\nステップ 7/7: 処理完了")
+        print(f"=== 処理結果サマリー ===")
+        print(f"✅ 新規追加: {len(result['added'])}件")
+        print(f"✅ 更新: {len(result['updated'])}件")
+        print(f"✅ 削除: {len(result['removed'])}件")
+        
         # 変更がない場合のメッセージ
         if not result['added'] and not result['updated'] and not result['removed']:
-            print("[情報] 変更はありませんでした", file=sys.stderr)
+            print("ℹ️  変更はありませんでした")
+        
+        print(f"\n完了時刻: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print("=== スクレイピング処理正常終了 ===\n")
         
     except Exception as e:
         result['error'] = str(e)
-        print(f"エラー: {e}", file=sys.stderr)
+        print(f"\n❌ エラーが発生しました: {e}")
+        print(f"エラー時刻: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print("=== スクレイピング処理異常終了 ===\n")
     
     # 結果をJSON形式で出力
     print(json.dumps(result, ensure_ascii=False))
