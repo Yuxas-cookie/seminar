@@ -1,9 +1,4 @@
 import { NextResponse } from 'next/server'
-import { exec } from 'child_process'
-import { promisify } from 'util'
-import path from 'path'
-
-const execAsync = promisify(exec)
 
 // 型定義
 interface UpdateResult {
@@ -16,32 +11,42 @@ interface UpdateResult {
 
 export async function POST() {
   try {
-    // Pythonスクリプトのパスを構築
-    const scriptPath = path.join(process.cwd(), '..', 'scraper', 'main_with_update.py')
-    const pythonPath = process.env.PYTHON_PATH || '/Users/hashimotoyasuhiro/miniforge3/envs/tf29/bin/python'
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
-    console.log('Pythonスクリプトを実行中:', scriptPath)
-    
-    // Pythonスクリプトを実行
-    const { stdout, stderr } = await execAsync(`${pythonPath} ${scriptPath}`)
-    
-    if (stderr && !stderr.includes('[')) {
-      // エラーログ以外のstderrがある場合
-      console.error('Pythonスクリプトエラー:', stderr)
-      throw new Error(stderr)
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Supabase設定が不完全です')
     }
-    
-    // 結果をパース
-    const result: UpdateResult = JSON.parse(stdout)
+
+    console.log('Supabase Edge Functionを呼び出し中...')
+
+    // Supabase Edge Functionを呼び出し
+    const response = await fetch(`${supabaseUrl}/functions/v1/scrape-seminars`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseAnonKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Edge Function エラー:', errorText)
+      throw new Error(`Edge Function エラー: ${response.status}`)
+    }
+
+    const result: UpdateResult = await response.json()
     
     if (!result.success) {
       throw new Error(result.error || 'スクレイピングに失敗しました')
     }
     
-    // ログ出力があれば表示
-    if (stderr) {
-      console.log('スクレイピングログ:', stderr)
-    }
+    console.log('スクレイピング完了:', {
+      added: result.added.length,
+      updated: result.updated.length,
+      removed: result.removed.length
+    })
     
     return NextResponse.json(result)
   } catch (error) {
