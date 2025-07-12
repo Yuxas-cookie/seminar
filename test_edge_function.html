@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edge Function テスト</title>
+</head>
+<body>
+    <h1>Edge Function テスト</h1>
+    <button id="testButton">Edge Functionをテスト</button>
+    <pre id="result"></pre>
+
+    <script>
+        document.getElementById('testButton').addEventListener('click', async () => {
+            const resultElement = document.getElementById('result');
+            resultElement.textContent = 'テスト中...';
+
+            try {
+                const response = await fetch('https://fiwmedfqmhefebbhhqmv.supabase.co/functions/v1/scrape-seminars', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpd21lZGZxbWhlZmViYmhocW12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMzU1ODQsImV4cCI6MjA2NzYxMTU4NH0.qoGCslHYIemQz8oC2NCRcp9UiouLsrbA_h-Vd2F12Rc',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+                resultElement.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultElement.textContent = 'エラー: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>

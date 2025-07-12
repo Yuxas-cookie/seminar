@@ -35,37 +35,54 @@ serve(async (req) => {
 
     console.log('スクレイピング開始...')
 
+    // ログイン処理（GETでログインページを取得）
+    const loginPageResponse = await fetch('https://exp-t.jp/account/login/expa')
+    const loginPageHtml = await loginPageResponse.text()
+    
+    // CSRFトークンなどがあれば抽出（必要に応じて）
+    console.log('ログインページ取得完了')
+
     // ログイン処理
     const loginResponse = await fetch('https://exp-t.jp/account/login/expa', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       },
       body: new URLSearchParams({
         'MasterCustomerMail': email,
         'MasterCustomerPassword': password
-      })
+      }),
+      redirect: 'manual' // リダイレクトを手動で処理
     })
 
-    if (!loginResponse.ok) {
-      throw new Error('ログインに失敗しました')
-    }
-
-    // クッキーを取得
-    const cookies = loginResponse.headers.get('set-cookie') || ''
+    console.log('ログインレスポンスステータス:', loginResponse.status)
+    
+    // クッキーを収集
+    const setCookieHeaders = loginResponse.headers.getSetCookie()
+    const cookieString = setCookieHeaders.map(cookie => cookie.split(';')[0]).join('; ')
+    console.log('取得したクッキー数:', setCookieHeaders.length)
 
     // カレンダーページを取得
     const calendarResponse = await fetch('https://exp-t.jp/e/event/calendar', {
       headers: {
-        'Cookie': cookies
+        'Cookie': cookieString,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
     })
 
     const html = await calendarResponse.text()
+    console.log('HTMLの長さ:', html.length)
+    console.log('HTML冒頭500文字:', html.substring(0, 500))
 
     // HTMLからセミナー情報を抽出
     const seminars = parseCalendarHTML(html)
     console.log(`${seminars.length}件のセミナーを取得`)
+    
+    // デバッグ: 最初の3件を表示
+    if (seminars.length > 0) {
+      console.log('取得したセミナー（最初の3件）:', seminars.slice(0, 3))
+    }
 
     // 既存データを取得（全て）
     const { data: existingData, error: fetchError } = await supabase
@@ -198,45 +215,118 @@ serve(async (req) => {
 function parseCalendarHTML(html: string): Seminar[] {
   const seminars: Seminar[] = []
   
-  // mb30クラスを含む要素を探す
-  const mb30Match = html.match(/<[^>]*class=['"][^'"]*mb30[^'"]*['"][^>]*>[\s\S]*?<\/[^>]*>/g)
-  if (!mb30Match) return seminars
+  console.log('HTMLパース開始...')
+  
+  // mb30クラスを持つ要素を探す - Pythonと同じ方法を使用
+  const mb30Pattern = /<[^>]+class\s*=\s*["'][^"']*\bmb30\b[^"']*["'][^>]*>[\s\S]*?(?=<[^>]+class\s*=\s*["'][^"']*\bmb30\b|$)/gi
+  const mb30Matches = html.match(mb30Pattern)
+  
+  if (!mb30Matches || mb30Matches.length === 0) {
+    console.log('mb30クラスの要素が見つかりません')
+    console.log('HTML内のclass属性を確認:', html.match(/class\s*=\s*["'][^"']*mb30[^"']*["']/gi)?.slice(0, 3))
+    
+    // mb30を含む要素をより広範囲に探す
+    const mb30Start = html.indexOf('mb30')
+    if (mb30Start !== -1) {
+      console.log('mb30文字列は存在しますが、正規表現でマッチしませんでした')
+      console.log('mb30周辺のHTML:', html.substring(Math.max(0, mb30Start - 50), Math.min(html.length, mb30Start + 150)))
+    }
+    
+    return seminars
+  }
+  
+  console.log(`mb30要素数: ${mb30Matches.length}`)
+  
+  // 最初のmb30要素のみを処理（Pythonスクリプトと同じ）
+  const scheduleBlock = mb30Matches[0]
+  console.log('mb30ブロックの最初の500文字:', scheduleBlock.substring(0, 500))
   
   // テーブルを抽出
-  const tableRegex = /<table[^>]*>[\s\S]*?<\/table>/g
-  const tables = html.match(tableRegex) || []
+  const tables = scheduleBlock.match(/<table[^>]*>[\s\S]*?<\/table>/gi) || []
+  console.log(`テーブル数: ${tables.length}`)
   
   for (const table of tables) {
-    try {
-      // fw-bクラスの要素を探す
-      const fwbRegex = /<[^>]*class=['"][^'"]*fw-b[^'"]*['"][^>]*>([^<]*)</g
-      const fwbMatches = [...table.matchAll(fwbRegex)]
-      
-      if (fwbMatches.length >= 2) {
-        const dateText = fwbMatches[fwbMatches.length - 2][1]
-        const countText = fwbMatches[fwbMatches.length - 1][1]
-        
-        // 日付と時刻を解析 (例: "12/25(水) 10:00｜90分")
-        const dateMatch = dateText.match(/(\d+)\/(\d+).*?(\d+):(\d+)/)
-        if (dateMatch) {
-          const [_, month, day, hour, minute] = dateMatch
-          const currentYear = new Date().getFullYear()
-          
-          seminars.push({
-            event_date: `${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`,
-            event_time: `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:00`,
-            participant_count: parseInt(countText) || 0,
-            year: currentYear,
-            month: parseInt(month),
-            day: parseInt(day)
-          })
-        }
-      }
-    } catch (error) {
-      console.error('テーブル解析エラー:', error)
-      continue
+    const seminar = parseTable(table)
+    if (seminar) {
+      seminars.push(seminar)
+      console.log(`セミナー追加: ${seminar.event_date} ${seminar.event_time} - ${seminar.participant_count}人`)
     }
   }
   
+  console.log(`パース完了: ${seminars.length}件のセミナーを抽出`)
   return seminars
+}
+
+// テーブルからセミナー情報を抽出
+function parseTable(tableHtml: string): Seminar | null {
+  try {
+    // fw-bクラスの要素を探す - より柔軟なパターン
+    const fwbPattern = /<[^>]+class\s*=\s*["']([^"']*\bfw-b\b[^"']*|fw-b)["'][^>]*>([^<]+)</gi
+    const fwbMatches = [...tableHtml.matchAll(fwbPattern)]
+    
+    if (fwbMatches.length < 2) {
+      // fw-bが見つからない場合、異なるパターンを試す
+      const altPattern = /<[^>]+class\s*=\s*["'][^"']*fw-b[^"']*["'][^>]*>[\s\S]*?<\/[^>]+>/gi
+      const altMatches = [...tableHtml.matchAll(altPattern)]
+      
+      if (altMatches.length >= 2) {
+        console.log('代替パターンでfw-b要素を検出')
+        // 内部のテキストを抽出
+        const texts = altMatches.map(match => {
+          const textMatch = match[0].match(/>([^<]+)</);
+          return textMatch ? textMatch[1].trim() : '';
+        }).filter(text => text);
+        
+        if (texts.length >= 2) {
+          const dateText = texts[texts.length - 2]
+          const countText = texts[texts.length - 1]
+          
+          console.log(`解析中 - 日付: ${dateText}, 人数: ${countText}`)
+          
+          // 日付と時刻を解析
+          const dateMatch = dateText.match(/(\d+)\/(\d+)[^0-9]*(\d+):(\d+)/)
+          if (dateMatch) {
+            const [_, month, day, hour, minute] = dateMatch
+            const currentYear = new Date().getFullYear()
+            
+            return {
+              event_date: `${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`,
+              event_time: `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:00`,
+              participant_count: parseInt(countText) || 0,
+              year: currentYear,
+              month: parseInt(month),
+              day: parseInt(day)
+            }
+          }
+        }
+      }
+      return null
+    }
+    
+    // 通常のfw-bパターン処理
+    const dateText = fwbMatches[fwbMatches.length - 2][2].trim()
+    const countText = fwbMatches[fwbMatches.length - 1][2].trim()
+    
+    console.log(`解析中 - 日付: ${dateText}, 人数: ${countText}`)
+    
+    // 日付と時刻を解析 (例: "7/12(金) 12:00｜90分" または "7/12(金) 12:00")
+    const dateMatch = dateText.match(/(\d+)\/(\d+)[^0-9]*(\d+):(\d+)/)
+    if (dateMatch) {
+      const [_, month, day, hour, minute] = dateMatch
+      const currentYear = new Date().getFullYear()
+      
+      return {
+        event_date: `${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`,
+        event_time: `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:00`,
+        participant_count: parseInt(countText) || 0,
+        year: currentYear,
+        month: parseInt(month),
+        day: parseInt(day)
+      }
+    }
+  } catch (error) {
+    console.error('テーブル解析エラー:', error)
+  }
+  
+  return null
 }
