@@ -1,0 +1,8 @@
+calendar-app/supabase/functions/
+scraper/
+*.py
+cron_script.sh
+*.md
+.env*
+requirements.txt
+setup.py
