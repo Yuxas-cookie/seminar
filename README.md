@@ -1,130 +1,136 @@
-# エキスパ セミナースクレイパー
+# エキスパ セミナーカレンダー & スクレイパー
 
-エキスパのセミナー開催情報をスクレイピングして、Supabaseに保存するPythonアプリケーションです。
+セミナー情報をスクレイピングして表示・管理するカレンダーアプリケーションです。
 
 ## 機能
 
-- エキスパのセミナー情報を自動取得
-- Supabaseデータベースへの保存
-- 重複チェック機能
-- セミナー情報の管理（タイトル、日時、場所、講師、参加費など）
+- セミナー情報の自動スクレイピング
+- カレンダー表示
+- スタッフ管理（並び順付き）
+- 入れない日の管理（スタッフ別）
+- セミナー情報の自動更新（4時間ごと）
+- 物理削除による実行日以降のデータ管理
+- 詳細なログ出力
+- レスポンシブデザイン対応
+
+## プロジェクト構成
+
+```
+expertspa-scraper/
+├── scraper/                    # Pythonスクレイピングスクリプト
+│   ├── main_with_update.py     # メインスクレイピングスクリプト（物理削除対応）
+│   └── ...
+├── calendar-app/               # Next.jsカレンダーアプリ
+│   ├── src/
+│   ├── supabase/
+│   │   └── functions/         # Edge Functions
+│   └── ...
+├── cron_script.sh             # ローカルcron実行用スクリプト
+├── DEPLOYMENT_GUIDE.md        # デプロイメントガイド
+└── SUPABASE_CRON_GUIDE.md     # Supabase定期実行ガイド
+```
 
 ## セットアップ
 
 ### 1. 環境準備
 
 ```bash
-# リポジトリのクローン（またはファイルをコピー）
-cd expertspa-scraper
+# リポジトリのクローン
+git clone https://github.com/Yuxas-cookie/seminar.git
+cd seminar
 
 # Python仮想環境の作成（推奨）
 python -m venv venv
 source venv/bin/activate  # Mac/Linux
-# または
-venv\Scripts\activate  # Windows
 
-# セットアップスクリプトの実行
-python setup.py
+# Python依存関係のインストール
+pip install -r requirements.txt
 ```
 
-### 2. ChromeDriverのインストール
+### 2. 環境変数の設定
 
-**Mac:**
-```bash
-brew install chromedriver
-```
-
-**その他:**
-[ChromeDriver公式サイト](https://chromedriver.chromium.org/)からダウンロード
-
-### 3. Supabaseの設定
-
-1. [Supabase](https://supabase.com)でプロジェクトを作成
-2. SQL Editorで `supabase/schema.sql` の内容を実行
-3. プロジェクトのURLとAnon Keyを取得
-4. `.env` ファイルに設定を記入
+`.env` ファイルを作成：
 
 ```env
-SUPABASE_URL=https://xxxxx.supabase.co
-SUPABASE_KEY=your-anon-key
+# Supabase
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+
+# Python実行パス
+PYTHON_PATH=/Users/hashimotoyasuhiro/miniforge3/envs/tf29/bin/python
+
+# スクレイピング認証情報
+SCRAPING_EMAIL=your_email
+SCRAPING_PASSWORD=your_password
+```
+
+### 3. Webアプリのセットアップ
+
+```bash
+cd calendar-app
+npm install
+npm run dev
 ```
 
 ## 使用方法
 
-### スクレイピングの実行
+### 手動実行
+
+1. **Pythonスクリプト直接実行**:
+```bash
+python scraper/main_with_update.py
+```
+
+2. **Webアプリから実行**:
+- ブラウザで `http://localhost:3000` を開く
+- 右上の「データを更新」ボタンをクリック
+
+### 自動実行（Supabase）
+
+Supabase Edge FunctionsとPg_cronで4時間ごとに自動実行されます。
+詳細は `SUPABASE_CRON_GUIDE.md` を参照。
+
+### ローカルcron設定
 
 ```bash
-python scraper/main.py
+# crontabに追加
+crontab -e
+# 4時間ごとに実行
+0 */4 * * * /path/to/expertspa-scraper/cron_script.sh
 ```
 
-### 接続テスト
+## 技術スタック
 
-```bash
-python scraper/main.py test
-```
+- **スクレイピング**: Python, Selenium, BeautifulSoup
+- **フロントエンド**: Next.js 15, TypeScript, Tailwind CSS v4
+- **データベース**: Supabase
+- **定期実行**: Supabase Edge Functions, pg_cron
+- **UI**: Radix UI, Framer Motion
+- **カレンダー**: FullCalendar
 
-### 定期実行（cron）
+## 主な機能の詳細
 
-```bash
-# crontabに追加（毎日午前9時に実行）
-0 9 * * * cd /path/to/expertspa-scraper && /path/to/venv/bin/python scraper/main.py >> logs/scraping.log 2>&1
-```
+### 物理削除による更新
 
-## プロジェクト構成
+- 実行日以降の日程で、スクレイピング結果に存在しないセミナーは完全に削除
+- 過去の日程は保持される
+- 変更内容は全てログに出力
 
-```
-expertspa-scraper/
-├── scraper/
-│   ├── main.py              # メインスクリプト
-│   ├── expertspa_scraper.py # スクレイピングロジック
-│   └── supabase_client.py   # Supabase接続
-├── supabase/
-│   └── schema.sql           # データベーススキーマ
-├── config/                  # 設定ファイル
-├── logs/                    # ログファイル
-├── requirements.txt         # Python依存関係
-├── setup.py                # セットアップスクリプト
-└── .env                    # 環境変数（gitignore推奨）
-```
+### ログ出力
 
-## データベーススキーマ
-
-### seminarsテーブル
-
-| カラム名 | 型 | 説明 |
-|---------|------|------|
-| id | UUID | 主キー |
-| title | VARCHAR(255) | セミナータイトル |
-| description | TEXT | 説明文 |
-| event_date | DATE | 開催日 |
-| event_time | TIME | 開催時刻 |
-| location | VARCHAR(255) | 開催場所 |
-| url | VARCHAR(500) | 詳細URL |
-| presenter | VARCHAR(255) | 講師名 |
-| capacity | INTEGER | 定員 |
-| fee | INTEGER | 参加費（円） |
-| status | VARCHAR(50) | ステータス |
-| created_at | TIMESTAMP | 作成日時 |
-| updated_at | TIMESTAMP | 更新日時 |
-| scraped_at | TIMESTAMP | スクレイピング日時 |
+スクリプト実行時に以下のログが出力されます：
+- `[新規追加]` - 新しいセミナー
+- `[更新]` - 参加者数の変更
+- `[削除]` - 削除されたセミナー
+- `[情報]` - 変更なし
 
 ## トラブルシューティング
 
-### ChromeDriverエラー
-- Chromeブラウザのバージョンと ChromeDriverのバージョンが一致しているか確認
-- PATHに ChromeDriverが含まれているか確認
-
-### Supabase接続エラー
-- .envファイルの設定を確認
-- Supabaseプロジェクトが稼働しているか確認
-- ネットワーク接続を確認
-
-### スクレイピングでデータが取得できない
-- エキスパのサイト構造が変更されている可能性
-- `scraper/expertspa_scraper.py` のセレクタを更新する必要があるかも
+詳細は各ガイドを参照：
+- `DEPLOYMENT_GUIDE.md` - デプロイメント関連
+- `SUPABASE_CRON_GUIDE.md` - Supabase定期実行関連
 
 ## 注意事項
 
-- スクレイピングは相手サーバーに負荷をかけないよう、適度な間隔で実行してください
-- robots.txtを確認し、サイトの利用規約を遵守してください
+- スクレイピングは相手サーバーに負荷をかけないよう配慮してください
 - 取得したデータの使用については、エキスパの利用規約に従ってください
