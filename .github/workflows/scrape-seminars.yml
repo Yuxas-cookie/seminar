@@ -1,0 +1,59 @@
+name: セミナー情報スクレイピング
+
+# いつ実行するか
+on:
+  # 定期実行：4時間ごと
+  schedule:
+    - cron: '0 */4 * * *'  # 0時、4時、8時、12時、16時、20時に実行
+  
+  # 手動実行も可能にする
+  workflow_dispatch:
+  
+  # mainブランチへのプッシュ時も実行（テスト用）
+  push:
+    branches: [ main ]
+    paths:
+      - 'scraper/**'  # scraperフォルダ内のファイルが変更された時のみ
+
+# 実行する処理
+jobs:
+  scrape:
+    runs-on: ubuntu-latest  # Ubuntu環境で実行
+    
+    steps:
+    # 1. リポジトリのコードを取得
+    - name: リポジトリをチェックアウト
+      uses: actions/checkout@v3
+    
+    # 2. Pythonをセットアップ
+    - name: Python 3.9をセットアップ
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    # 3. Chromeブラウザをインストール
+    - name: Chromeをインストール
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+    
+    # 4. Python依存関係をインストール
+    - name: 依存関係をインストール
+      run: |
+        python -m pip install --upgrade pip
+        pip install selenium beautifulsoup4 pandas tqdm python-dotenv supabase chromedriver-binary
+    
+    # 5. スクレイピングを実行
+    - name: セミナー情報をスクレイピング
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      run: |
+        python scraper/main_with_update.py
+    
+    # 6. 結果を通知（オプション）
+    - name: 実行結果を記録
+      if: always()  # 成功・失敗に関わらず実行
+      run: |
+        echo "スクレイピング完了: $(date)"
+        echo "ステータス: ${{ job.status }}"

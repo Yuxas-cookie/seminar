@@ -294,13 +294,15 @@ serve(async (req) => {
 
     // 削除処理（物理削除） - 実行日以降の日程のみ
     addLog('ステップ8: 削除処理開始')
+    addLog('⚠️ 警告: Edge Functionではログインが正しく機能しないため、削除処理を無効化しています')
     let deleteCount = 0
     for (const [key, existing] of existingMap) {
       const eventDate = new Date(existing.event_date)
       eventDate.setHours(0, 0, 0, 0)
 
       // 実行日以降の日程で、新しいデータに含まれていない場合
-      if (eventDate >= today && !currentSeminars.has(key)) {
+      // 注意：Edge Functionではセミナーデータが取得できないため、削除処理を無効化
+      if (false && eventDate >= today && !currentSeminars.has(key)) {
         deleteCount++
         addLog(`削除対象 [${deleteCount}]`, {
           key,
