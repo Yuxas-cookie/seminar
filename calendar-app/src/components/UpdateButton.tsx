@@ -39,6 +39,17 @@ export default function UpdateButton({ onUpdate }: UpdateButtonProps) {
 
       const scrapeResult = await scrapeResponse.json()
       console.log('スクレイピング結果:', scrapeResult)
+      
+      // デバッグログを表示
+      if (scrapeResult.debugLogs && scrapeResult.debugLogs.length > 0) {
+        console.group('🔍 Edge Function デバッグログ')
+        scrapeResult.debugLogs.forEach((log: string) => console.log(log))
+        console.groupEnd()
+      }
+      
+      if (!scrapeResult.success) {
+        throw new Error(scrapeResult.error || 'スクレイピングに失敗しました')
+      }
 
       // 更新結果を取得
       const result = await onUpdate()
