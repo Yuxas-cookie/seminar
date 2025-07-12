@@ -1,7 +1,6 @@
 {
-  "rootDirectory": "calendar-app",
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm install",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD ../"
+  "buildCommand": "cd calendar-app && npm run build",
+  "outputDirectory": "calendar-app/.next",
+  "installCommand": "cd calendar-app && npm install",
+  "framework": "nextjs"
 }
