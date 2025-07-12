@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server'
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const githubToken = process.env.GITHUB_TOKEN
     const owner = 'Yuxas-cookie'
     const repo = 'seminar'
-    const runId = params.id
+    const { id: runId } = await params
 
     if (!githubToken) {
       return NextResponse.json(
