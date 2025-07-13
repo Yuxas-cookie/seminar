@@ -127,11 +127,33 @@ export default function SeminarCalendar() {
           
           const staff = seminar.staff_id ? staffMap[seminar.staff_id] : undefined
 
+          // 色の設定をここで行う
+          let bgColor = '#E5E7EB' // デフォルト: グレー（参加者なし）
+          let txtColor = '#4B5563' // デフォルト: 濃いグレー
+          let brdColor = '#D1D5DB' // デフォルト: グレーボーダー
+          
+          if (seminar.participant_count > 0) {
+            if (staff?.theme_color) {
+              // 参加者あり + スタッフ割り当て済み: スタッフの色
+              bgColor = staff.theme_color
+              txtColor = getContrastTextColor(staff.theme_color)
+              brdColor = getDarkerShade(staff.theme_color)
+            } else {
+              // 参加者あり + スタッフ未割り当て: 白
+              bgColor = '#FFFFFF'
+              txtColor = '#1F2937'
+              brdColor = '#9CA3AF'
+            }
+          }
+
           return {
             id: seminar.id,
             title: `${seminar.participant_count}名${staff ? ` - ${staff.name}` : ''}`,
             start: startDateTime,
             end: endTime.toISOString(),
+            backgroundColor: bgColor,
+            borderColor: brdColor,
+            textColor: txtColor,
             extendedProps: {
               participantCount: seminar.participant_count,
               eventDate: seminar.event_date,
@@ -560,11 +582,11 @@ export default function SeminarCalendar() {
               className="relative overflow-hidden rounded-lg p-2 cursor-pointer
                        transition-all duration-200 shadow-sm hover:shadow-md"
               style={{
-                backgroundColor: backgroundColor,
-                color: textColor,
+                backgroundColor: eventInfo.event.backgroundColor || backgroundColor,
+                color: eventInfo.event.textColor || textColor,
                 borderWidth: '2px',
                 borderStyle: 'solid',
-                borderColor: borderColor
+                borderColor: eventInfo.event.borderColor || borderColor
               }}
             >
               <div className="absolute inset-0 bg-black/5 opacity-0 hover:opacity-100 transition-opacity" />
@@ -582,12 +604,6 @@ export default function SeminarCalendar() {
                   <div className="text-xs font-medium mt-1 pt-1 border-t" 
                        style={{ borderColor: `${textColor}30` }}>
                     担当: {staffName}
-                  </div>
-                )}
-                {hasParticipants && !hasStaff && (
-                  <div className="text-xs font-medium mt-1 pt-1 border-t text-orange-600" 
-                       style={{ borderColor: '#FED7AA' }}>
-                    ⚠️ 未割り当て
                   </div>
                 )}
               </div>
