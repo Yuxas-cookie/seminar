@@ -497,20 +497,36 @@ export default function SeminarCalendar() {
     const hasParticipants = participantCount > 0
     const staffColor = eventInfo.event.extendedProps.staffColor
     const staffName = eventInfo.event.extendedProps.staffName
-    const textColor = hasParticipants && staffColor ? getContrastTextColor(staffColor) : undefined
-    const borderColor = hasParticipants && staffColor ? getDarkerShade(staffColor) : undefined
+    const hasStaff = !!staffColor && !!staffName
+    
+    // 色の設定
+    let backgroundColor = '#E5E7EB' // デフォルト: グレー（参加者なし）
+    let textColor = '#4B5563' // デフォルト: 濃いグレー
+    let borderColor = '#D1D5DB' // デフォルト: グレーボーダー
+    
+    if (hasParticipants) {
+      if (hasStaff) {
+        // 参加者あり + スタッフ割り当て済み: スタッフの色
+        backgroundColor = staffColor
+        textColor = getContrastTextColor(staffColor)
+        borderColor = getDarkerShade(staffColor)
+      } else {
+        // 参加者あり + スタッフ未割り当て: 白
+        backgroundColor = '#FFFFFF'
+        textColor = '#1F2937'
+        borderColor = '#9CA3AF'
+      }
+    }
 
     // モバイル表示
     if (isMobileView) {
-      const bgColor = hasParticipants && staffColor ? staffColor : '#E5E7EB'
-      const txtColor = hasParticipants && staffColor ? getContrastTextColor(staffColor) : '#4B5563'
-      
       return (
         <div 
           className="p-0.5 h-full rounded"
           style={{ 
-            backgroundColor: bgColor,
-            color: txtColor
+            backgroundColor: backgroundColor,
+            color: textColor,
+            border: hasParticipants && !hasStaff ? `1px solid ${borderColor}` : undefined
           }}
         >
           <div className="space-y-0.5">
@@ -541,21 +557,13 @@ export default function SeminarCalendar() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               whileHover={{ scale: 1.05 }}
-              className={`
-                relative overflow-hidden rounded-lg p-2 cursor-pointer
-                transition-all duration-200 shadow-sm hover:shadow-md
-                ${hasParticipants 
-                  ? '' 
-                  : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 border border-gray-300'
-                }
-              `}
+              className="relative overflow-hidden rounded-lg p-2 cursor-pointer
+                       transition-all duration-200 shadow-sm hover:shadow-md"
               style={{
-                backgroundColor: hasParticipants && staffColor ? staffColor : undefined,
-                backgroundImage: hasParticipants && !staffColor ? 
-                  'linear-gradient(to bottom right, rgb(99 102 241), rgb(139 92 246))' : undefined,
-                color: textColor || (hasParticipants ? 'white' : undefined),
-                borderWidth: hasParticipants && staffColor ? '2px' : undefined,
-                borderStyle: hasParticipants && staffColor ? 'solid' : undefined,
+                backgroundColor: backgroundColor,
+                color: textColor,
+                borderWidth: '2px',
+                borderStyle: 'solid',
                 borderColor: borderColor
               }}
             >
@@ -572,13 +580,19 @@ export default function SeminarCalendar() {
                 </div>
                 {staffName && (
                   <div className="text-xs font-medium mt-1 pt-1 border-t" 
-                       style={{ borderColor: textColor ? `${textColor}30` : 'rgba(255,255,255,0.3)' }}>
+                       style={{ borderColor: `${textColor}30` }}>
                     担当: {staffName}
+                  </div>
+                )}
+                {hasParticipants && !hasStaff && (
+                  <div className="text-xs font-medium mt-1 pt-1 border-t text-orange-600" 
+                       style={{ borderColor: '#FED7AA' }}>
+                    ⚠️ 未割り当て
                   </div>
                 )}
               </div>
 
-              {hasParticipants && (
+              {hasParticipants && hasStaff && (
                 <motion.div
                   className="absolute -right-1 -top-1"
                   animate={{ rotate: [0, 10, -10, 0] }}
