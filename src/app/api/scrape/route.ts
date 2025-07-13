@@ -11,8 +11,7 @@ interface Seminar {
   month: number
   day: number
   scraped_at?: string
-  is_deleted?: boolean
-  deleted_at?: string
+  staff_id?: string
 }
 
 // Supabaseクライアントを関数内で初期化
@@ -75,14 +74,13 @@ export async function POST() {
     // Supabaseクライアントを取得
     const supabase = getSupabaseClient()
     
-    // 既存データを取得
+    // 既存データを取得（スタッフ情報も含む）
     const { data: existingData } = await supabase
       .from('seminars')
       .select('*')
-      .eq('is_deleted', false)
     
-    const existingMap = new Map<string, Seminar>(
-      existingData?.map((s: Seminar) => [`${s.event_date}_${s.event_time}`, s]) || []
+    const existingMap = new Map<string, any>(
+      existingData?.map((s: any) => [`${s.event_date}_${s.event_time}`, s]) || []
     )
     
     const result = {
@@ -107,8 +105,7 @@ export async function POST() {
           .from('seminars')
           .insert({
             ...seminar,
-            scraped_at: new Date().toISOString(),
-            is_deleted: false
+            scraped_at: new Date().toISOString()
           })
         
         if (!error) {
@@ -119,7 +116,7 @@ export async function POST() {
           })
         }
       } else if (existing.participant_count !== seminar.participant_count) {
-        // 更新
+        // 更新（スタッフ情報は保持）
         const { error } = await supabase
           .from('seminars')
           .update({
@@ -139,22 +136,26 @@ export async function POST() {
       }
     }
     
-    // 削除処理
+    // 削除処理（物理削除）
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
     for (const [key, existing] of existingMap) {
       if (!currentSeminars.has(key)) {
-        const { error } = await supabase
-          .from('seminars')
-          .update({
-            is_deleted: true,
-            deleted_at: new Date().toISOString()
-          })
-          .eq('id', existing.id)
-        
-        if (!error) {
-          result.removed.push({
-            date: existing.event_date,
-            time: existing.event_time
-          })
+        // 実行日以降の日程のみ削除
+        const eventDate = new Date(existing.event_date)
+        if (eventDate >= today) {
+          const { error } = await supabase
+            .from('seminars')
+            .delete()
+            .eq('id', existing.id)
+          
+          if (!error) {
+            result.removed.push({
+              date: existing.event_date,
+              time: existing.event_time
+            })
+          }
         }
       }
     }

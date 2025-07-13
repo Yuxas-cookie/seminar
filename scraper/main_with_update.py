@@ -183,11 +183,16 @@ def main():
             if key in existing_data:
                 old_data = existing_data[key]
                 if old_data['participant_count'] != data['participant_count']:
-                    # 参加者数が変更された場合
-                    supabase_client.table('seminars').update({
+                    # 参加者数が変更された場合（スタッフ情報は保持）
+                    update_data = {
                         'participant_count': data['participant_count'],
                         'scraped_at': datetime.now().isoformat()
-                    }).eq('id', old_data['id']).execute()
+                    }
+                    # スタッフ情報がある場合は保持
+                    if 'staff_id' in old_data and old_data['staff_id']:
+                        update_data['staff_id'] = old_data['staff_id']
+                    
+                    supabase_client.table('seminars').update(update_data).eq('id', old_data['id']).execute()
                     
                     result['updated'].append({
                         'date': data['event_date'],
