@@ -127,33 +127,11 @@ export default function SeminarCalendar() {
           
           const staff = seminar.staff_id ? staffMap[seminar.staff_id] : undefined
 
-          // 色の設定をここで行う
-          let bgColor = '#E5E7EB' // デフォルト: グレー（参加者なし）
-          let txtColor = '#4B5563' // デフォルト: 濃いグレー
-          let brdColor = '#D1D5DB' // デフォルト: グレーボーダー
-          
-          if (seminar.participant_count > 0) {
-            if (staff?.theme_color) {
-              // 参加者あり + スタッフ割り当て済み: スタッフの色
-              bgColor = staff.theme_color
-              txtColor = getContrastTextColor(staff.theme_color)
-              brdColor = getDarkerShade(staff.theme_color)
-            } else {
-              // 参加者あり + スタッフ未割り当て: 白
-              bgColor = '#FFFFFF'
-              txtColor = '#1F2937'
-              brdColor = '#9CA3AF'
-            }
-          }
-
           return {
             id: seminar.id,
             title: `${seminar.participant_count}名${staff ? ` - ${staff.name}` : ''}`,
             start: startDateTime,
             end: endTime.toISOString(),
-            backgroundColor: bgColor,
-            borderColor: brdColor,
-            textColor: txtColor,
             extendedProps: {
               participantCount: seminar.participant_count,
               eventDate: seminar.event_date,
@@ -379,6 +357,19 @@ export default function SeminarCalendar() {
     const isBlocked = eventInfo.event.extendedProps.isBlocked
     const isMobileView = eventInfo.view.type === 'dayGridMonth' && typeof window !== 'undefined' && window.innerWidth < 640
     
+    // デバッグログ
+    if (!isBlocked && eventInfo.event.extendedProps.participantCount > 0) {
+      console.log('Event rendering debug:', {
+        id: eventInfo.event.id,
+        backgroundColor: eventInfo.event.backgroundColor,
+        borderColor: eventInfo.event.borderColor,
+        textColor: eventInfo.event.textColor,
+        staffName: eventInfo.event.extendedProps.staffName,
+        staffColor: eventInfo.event.extendedProps.staffColor,
+        participantCount: eventInfo.event.extendedProps.participantCount
+      })
+    }
+    
     if (isBlocked) {
       const blockedStaffList = eventInfo.event.extendedProps.blockedStaffList || []
       const hasAllBlocked = eventInfo.event.extendedProps.hasAllBlocked
@@ -453,11 +444,11 @@ export default function SeminarCalendar() {
                 className="relative overflow-hidden rounded-lg p-1 cursor-pointer
                          transition-all duration-200 shadow-sm hover:shadow-md"
                 style={{
-                  backgroundColor: eventInfo.event.backgroundColor,
+                  backgroundColor: '#FEE2E2',
                   borderWidth: '2px',
                   borderStyle: 'solid',
-                  borderColor: eventInfo.event.borderColor,
-                  color: eventInfo.event.textColor
+                  borderColor: '#EF4444',
+                  color: '#991B1B'
                 }}
               >
                 <div className="absolute inset-0 bg-black/5 opacity-0 hover:opacity-100 transition-opacity" />
@@ -515,13 +506,24 @@ export default function SeminarCalendar() {
       )
     }
     
-    const participantCount = eventInfo.event.extendedProps.participantCount
+    const participantCount = eventInfo.event.extendedProps.participantCount || 0
     const hasParticipants = participantCount > 0
     const staffColor = eventInfo.event.extendedProps.staffColor
     const staffName = eventInfo.event.extendedProps.staffName
     const hasStaff = !!staffColor && !!staffName
     
-    // 色の設定
+    // デバッグログ追加
+    console.log('Event rendering:', {
+      date: eventInfo.event.extendedProps.eventDate,
+      time: eventInfo.event.extendedProps.eventTime,
+      participantCount,
+      hasParticipants,
+      staffName,
+      staffColor,
+      hasStaff
+    })
+    
+    // 色の設定 - extendedPropsから直接計算
     let backgroundColor = '#E5E7EB' // デフォルト: グレー（参加者なし）
     let textColor = '#4B5563' // デフォルト: 濃いグレー
     let borderColor = '#D1D5DB' // デフォルト: グレーボーダー
@@ -582,11 +584,11 @@ export default function SeminarCalendar() {
               className="relative overflow-hidden rounded-lg p-2 cursor-pointer
                        transition-all duration-200 shadow-sm hover:shadow-md"
               style={{
-                backgroundColor: eventInfo.event.backgroundColor || backgroundColor,
-                color: eventInfo.event.textColor || textColor,
+                backgroundColor: backgroundColor,
+                color: textColor,
                 borderWidth: '2px',
                 borderStyle: 'solid',
-                borderColor: eventInfo.event.borderColor || borderColor
+                borderColor: borderColor
               }}
             >
               <div className="absolute inset-0 bg-black/5 opacity-0 hover:opacity-100 transition-opacity" />
