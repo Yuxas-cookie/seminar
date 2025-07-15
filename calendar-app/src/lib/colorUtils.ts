@@ -74,5 +74,5 @@ export function adjustBrightness(hex: string, percent: number): string {
  * @returns Adjusted color (bright if participants, dark if none)
  */
 export function applyParticipantBrightness(color: string, hasParticipants: boolean): string {
-  return hasParticipants ? adjustBrightness(color, 20) : adjustBrightness(color, -50)
+  return hasParticipants ? adjustBrightness(color, 10) : adjustBrightness(color, -15)
 }
