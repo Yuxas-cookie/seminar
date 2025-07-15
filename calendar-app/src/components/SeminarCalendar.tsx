@@ -28,7 +28,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import UpdateButton from './UpdateButton'
 import StaffSelector from './StaffSelector'
-import { getContrastTextColor, getDarkerShade } from '@/lib/colorUtils'
+import { getContrastTextColor, getDarkerShade, applyParticipantBrightness } from '@/lib/colorUtils'
 import { logError } from '@/lib/errorUtils'
 
 interface CalendarEvent {
@@ -126,12 +126,24 @@ export default function SeminarCalendar() {
           endTime.setHours(endTime.getHours() + 1)
           
           const staff = seminar.staff_id ? staffMap[seminar.staff_id] : undefined
+          const hasParticipants = seminar.participant_count > 0
+          
+          // ルール1: 担当者の色（なければデフォルトカラー）
+          const baseColor = staff?.theme_color || '#9CA3AF' // デフォルトはグレー
+          
+          // ルール2: 参加者の有無で明暗を調整
+          const backgroundColor = applyParticipantBrightness(baseColor, hasParticipants)
+          const borderColor = getDarkerShade(backgroundColor)
+          const textColor = getContrastTextColor(backgroundColor)
 
           return {
             id: seminar.id,
             title: `${seminar.participant_count}名${staff ? ` - ${staff.name}` : ''}`,
             start: startDateTime,
             end: endTime.toISOString(),
+            backgroundColor,
+            borderColor,
+            textColor,
             extendedProps: {
               participantCount: seminar.participant_count,
               eventDate: seminar.event_date,
@@ -495,22 +507,19 @@ export default function SeminarCalendar() {
     
     const participantCount = eventInfo.event.extendedProps.participantCount
     const hasParticipants = participantCount > 0
-    const staffColor = eventInfo.event.extendedProps.staffColor
     const staffName = eventInfo.event.extendedProps.staffName
-    const textColor = hasParticipants && staffColor ? getContrastTextColor(staffColor) : undefined
-    const borderColor = hasParticipants && staffColor ? getDarkerShade(staffColor) : undefined
+    const backgroundColor = eventInfo.event.backgroundColor
+    const borderColor = eventInfo.event.borderColor
+    const textColor = eventInfo.event.textColor
 
     // モバイル表示
     if (isMobileView) {
-      const bgColor = hasParticipants && staffColor ? staffColor : '#E5E7EB'
-      const txtColor = hasParticipants && staffColor ? getContrastTextColor(staffColor) : '#4B5563'
-      
       return (
         <div 
           className="p-0.5 h-full rounded"
           style={{ 
-            backgroundColor: bgColor,
-            color: txtColor
+            backgroundColor: backgroundColor,
+            color: textColor
           }}
         >
           <div className="space-y-0.5">
@@ -541,21 +550,12 @@ export default function SeminarCalendar() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               whileHover={{ scale: 1.05 }}
-              className={`
-                relative overflow-hidden rounded-lg p-2 cursor-pointer
-                transition-all duration-200 shadow-sm hover:shadow-md
-                ${hasParticipants 
-                  ? '' 
-                  : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 border border-gray-300'
-                }
-              `}
+              className="relative overflow-hidden rounded-lg p-2 cursor-pointer
+                       transition-all duration-200 shadow-sm hover:shadow-md
+                       border-2 border-solid"
               style={{
-                backgroundColor: hasParticipants && staffColor ? staffColor : undefined,
-                backgroundImage: hasParticipants && !staffColor ? 
-                  'linear-gradient(to bottom right, rgb(99 102 241), rgb(139 92 246))' : undefined,
-                color: textColor || (hasParticipants ? 'white' : undefined),
-                borderWidth: hasParticipants && staffColor ? '2px' : undefined,
-                borderStyle: hasParticipants && staffColor ? 'solid' : undefined,
+                backgroundColor: backgroundColor,
+                color: textColor,
                 borderColor: borderColor
               }}
             >
@@ -572,7 +572,7 @@ export default function SeminarCalendar() {
                 </div>
                 {staffName && (
                   <div className="text-xs font-medium mt-1 pt-1 border-t" 
-                       style={{ borderColor: textColor ? `${textColor}30` : 'rgba(255,255,255,0.3)' }}>
+                       style={{ borderColor: `${textColor}30` }}>
                     担当: {staffName}
                   </div>
                 )}

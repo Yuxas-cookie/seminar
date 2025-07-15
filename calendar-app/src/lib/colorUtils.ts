@@ -47,3 +47,32 @@ export function getDarkerShade(hex: string): string {
   
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
 }
+
+/**
+ * Adjust color brightness
+ * @param hex - Hex color code
+ * @param percent - Percentage to adjust (-100 to 100, negative for darker, positive for brighter)
+ * @returns Adjusted hex color
+ */
+export function adjustBrightness(hex: string, percent: number): string {
+  const color = hex.replace('#', '')
+  const num = parseInt(color, 16)
+  const amt = Math.round(2.55 * percent)
+  const R = (num >> 16) + amt
+  const G = (num >> 8 & 0x00FF) + amt
+  const B = (num & 0x0000FF) + amt
+  
+  return '#' + (0x1000000 + Math.max(0, Math.min(255, R)) * 0x10000 +
+    Math.max(0, Math.min(255, G)) * 0x100 +
+    Math.max(0, Math.min(255, B))).toString(16).slice(1)
+}
+
+/**
+ * Apply brightness adjustment based on participant count
+ * @param color - Base color
+ * @param hasParticipants - Whether there are participants
+ * @returns Adjusted color (bright if participants, dark if none)
+ */
+export function applyParticipantBrightness(color: string, hasParticipants: boolean): string {
+  return hasParticipants ? adjustBrightness(color, 20) : adjustBrightness(color, -50)
+}
